@@ -1,0 +1,132 @@
+From 9806ae6fc60b606d6019901a0458d93f268a0277 Mon Sep 17 00:00:00 2001
+From: Sverre Johansen <svjohan@microsoft.com>
+Date: Thu, 7 May 2020 14:52:53 +0200
+Subject: [PATCH] Add resolutionPlatforms option/env for better React Native
+ support (with .d.ts fix)
+
+---
+ src/compiler/commandLineParser.ts    | 12 ++++++-
+ src/compiler/diagnosticMessages.json |  4 +++
+ src/compiler/moduleNameResolver.ts   | 50 ++++++++++++++++++++++------
+ src/compiler/types.ts                |  1 +
+ 4 files changed, 55 insertions(+), 12 deletions(-)
+
+diff --git a/src/compiler/commandLineParser.ts b/src/compiler/commandLineParser.ts
+index 8d4f332032..fd0f4f93d3 100644
+--- a/src/compiler/commandLineParser.ts
++++ b/src/compiler/commandLineParser.ts
+@@ -708,7 +708,17 @@ namespace ts {
+             category: Diagnostics.Module_Resolution_Options,
+             description: Diagnostics.Allow_accessing_UMD_globals_from_modules,
+         },
+-
++        {
++            name: "resolutionPlatforms",
++            type: "list",
++            element: {
++                name: "types",
++                type: "string"
++            },
++            showInSimplifiedHelpView: true,
++            category: Diagnostics.Module_Resolution_Options,
++            description: Diagnostics.List_of_platform_extensions_to_fallback_on
++         },
+         // Source Maps
+         {
+             name: "sourceRoot",
+diff --git a/src/compiler/diagnosticMessages.json b/src/compiler/diagnosticMessages.json
+index 1df368c428..ce965f74c1 100644
+--- a/src/compiler/diagnosticMessages.json
++++ b/src/compiler/diagnosticMessages.json
+@@ -5193,6 +5193,10 @@
+         "category": "Message",
+         "code": 90053
+     },
++    "List of platform extensions to fallback on": {
++        "category": "Message",
++        "code": 910044
++    },
+     "Convert function to an ES2015 class": {
+         "category": "Message",
+         "code": 95001
+diff --git a/src/compiler/moduleNameResolver.ts b/src/compiler/moduleNameResolver.ts
+index 82e39ecfad..b840a32075 100644
+--- a/src/compiler/moduleNameResolver.ts
++++ b/src/compiler/moduleNameResolver.ts
+@@ -1109,22 +1109,50 @@ namespace ts {
+     }
+ 
+     /** Return the file if it exists. */
+-    function tryFile(fileName: string, onlyRecordFailures: boolean, state: ModuleResolutionState): string | undefined {
+-        if (!onlyRecordFailures) {
+-            if (state.host.fileExists(fileName)) {
+-                if (state.traceEnabled) {
+-                    trace(state.host, Diagnostics.File_0_exist_use_it_as_a_name_resolution_result, fileName);
++    function tryFile(file: string, onlyRecordFailures: boolean, state: ModuleResolutionState): string | undefined {
++
++      const resolution_platforms = (
++	(process.env['RESOLUTION_PLATFORMS'] && JSON.parse(process.env['RESOLUTION_PLATFORMS']))
++	    || state.compilerOptions.resolutionPlatforms);
++        if (resolution_platforms) {
++          for(let platform of resolution_platforms) {
++            let result = tryFileForPlatform(platform);
++                if (result) {
++                    return result;
+                 }
+-                return fileName;
+             }
+-            else {
+-                if (state.traceEnabled) {
+-                    trace(state.host, Diagnostics.File_0_does_not_exist, fileName);
++        }
++
++        return tryFileForPlatform();
++
++        function tryFileForPlatform(platform?: string): string | undefined {
++            let fileName = file;
++            if (platform) {
++                const forkableExtensions = [".d.ts", ".tsx", ".ts", ".json", ".js"];
++                for (const extension of forkableExtensions) {
++                    if (file.endsWith(extension)) {
++                        fileName = file.slice(0, file.length - extension.length) + `.${platform}${extension}`
++                        break;
++                    }
+                 }
+             }
++
++            if (!onlyRecordFailures) {
++                if (state.host.fileExists(fileName)) {
++                    if (state.traceEnabled) {
++                        trace(state.host, Diagnostics.File_0_exist_use_it_as_a_name_resolution_result, fileName);
++                    }
++                    return fileName;
++                }
++                else {
++                    if (state.traceEnabled) {
++                        trace(state.host, Diagnostics.File_0_does_not_exist, fileName);
++                    }
++                }
++            }
++            state.failedLookupLocations.push(fileName);
++            return undefined;
+         }
+-        state.failedLookupLocations.push(fileName);
+-        return undefined;
+     }
+ 
+     function loadNodeModuleFromDirectory(extensions: Extensions, candidate: string, onlyRecordFailures: boolean, state: ModuleResolutionState, considerPackageJson = true) {
+diff --git a/src/compiler/types.ts b/src/compiler/types.ts
+index 8cf06d4ab4..8b8029e476 100644
+--- a/src/compiler/types.ts
++++ b/src/compiler/types.ts
+@@ -5212,6 +5212,7 @@ namespace ts {
+         incremental?: boolean;
+         tsBuildInfoFile?: string;
+         removeComments?: boolean;
++        resolutionPlatforms?: string[]; // Use react-native lookup logic for these platforms
+         rootDir?: string;
+         rootDirs?: string[];
+         skipLibCheck?: boolean;
+-- 
+2.26.1
+
