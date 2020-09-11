@@ -67,39 +67,3 @@ git commit -m "Update LKG"
 echo "Ready to publish TypeScript $typescript_version" | mail -s "TypeScript $typescript_version" "svjohan@microsoft.com"
 
 popd
-
-# Skipping the midgard upgrade
-exit 0
-
-midgard_checkout="midgard.git"
-
-if [ ! -d "$midgard_checkout" ]; then
-    git clone msfast@vs-ssh.visualstudio.com:v3/msfast/FAST/Midgard $midgard_checkout
-fi
-
-pushd $midgard_checkout
-
-# Make sure everything is clean and nice.
-git fetch origin
-git reset --hard origin/master
-git clean -xdf
-
-# Check if the branch for the tag exists, and exit if so.
-branch_list=$(git branch --list $tag_branch)
-if [ -n "$branch_list" ]
-then
-    echo "Branch ${tag_branch} exists in Midgard"
-    exit 1
-fi
-
-git checkout -b $tag_branch origin/master
-
-find . -name package.json | xargs sed -i '' -E "s/npm:@msfast\/typescript-platform-resolution@[^\"]+/npm:@msfast\/typescript-platform-resolution@$typescript_version/"
-git commit -a -m "Updated TypeScript to $latest_tag"
-better-vsts-npm-auth
-MIDGARD_SCOPE="all" yarn;
-yarn build
-
-popd # Midgard
-
-popd # Script directory
