@@ -2,20 +2,22 @@
 
 pushd $(dirname $0)
 
-typescript_checkout="typescript.git"
+typescript_checkout="checkouts/typescript.git"
 patch_file="`pwd`/patches/0001-resolution-platform-option-env-with-dts-fix.patch"
 
 if [ ! -d "$typescript_checkout" ]; then
-    git clone https://github.com/microsoft/TypeScript $typescript_checkout
+    git clone --quiet https://github.com/microsoft/TypeScript $typescript_checkout
 fi
 
 pushd $typescript_checkout
 
 # Make sure everything is clean and nice.
-git fetch origin
+git fetch --quiet origin
 
 # Find the latest tag
 latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1))
+
+echo "Found latest tag: $latest_tag"
 
 # Define a branch for our work
 tag_branch="svjohan/generated-typescript-platform-resolution/$latest_tag"
@@ -29,13 +31,12 @@ then
 fi
 
 # Create the branch
-git checkout -b $tag_branch $latest_tag
+# git checkout -b $tag_branch $latest_tag
+git worktree add ../../worktree/$latest_tag $latest_tag
 
-git clean -xdf
+cd ../../worktree/$latest_tag
 
-git stash save -u
-
-# apply the patch
+# Apply the patch
 git apply $patch_file
 
 # Exit if the patch failed
@@ -61,13 +62,11 @@ npm run jake LKG || exit 1
 git add .
 git commit -m "Update LKG"
 
-# publish to npm
-# npm publish
-
+# Ready to publish. This could be automated, but it's nice with a
+# human overlook first.
 echo "Ready to publish TypeScript $typescript_version" | mail -s "TypeScript $typescript_version" "svjohan@microsoft.com"
 
 popd
-
 
 # Skipping the midgard upgrade
 exit 0
