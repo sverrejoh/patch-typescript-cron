@@ -2,8 +2,9 @@
 
 pushd $(dirname $0)
 
-typescript_checkout="checkouts/typescript.git"
 patch_file="`pwd`/patches/0001-resolution-platform-option-env-with-dts-fix.patch"
+
+typescript_checkout="checkouts/typescript.git"
 
 if [ ! -d "$typescript_checkout" ]; then
     git clone --quiet https://github.com/microsoft/TypeScript $typescript_checkout
@@ -26,15 +27,25 @@ tag_branch="svjohan/generated-typescript-platform-resolution/$latest_tag"
 branch_list=$(git branch --list $tag_branch)
 if [ -n "$branch_list" ]
 then
-    echo "Branch ${tag_branch} exists in TypeScript"
+    echo "Branch ${tag_branch} exists in TypeScript. Exiting..."
+    popd
     exit 1
+fi
+
+worktree_path="../../worktree/$latest_tag"
+
+if [ -d $worktree_path ]
+then
+    echo "Worktree directory $worktree_path exists. Exiting..."
+    popd
+    exit 1;
 fi
 
 # Create the branch
 # git checkout -b $tag_branch $latest_tag
-git worktree add ../../worktree/$latest_tag $latest_tag
+git worktree add $worktree_path -b $tag_branch $latest_tag
 
-cd ../../worktree/$latest_tag
+cd $worktree_path
 
 # Apply the patch
 git apply $patch_file
@@ -43,7 +54,8 @@ git apply $patch_file
 patch_status=$?
 if test $patch_status -eq 1
 then
-    echo "Patch didn't apply. Please fix and try again"
+    echo "Patch didn't apply. Exiting..."
+    popd
     exit 1
 fi
 
