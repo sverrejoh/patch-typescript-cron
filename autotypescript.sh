@@ -69,10 +69,10 @@ git commit -a -m "Update name to @msfast/typescript-platform-resolution"
 typescript_version=$(grep "\"version\":" package.json | awk 'BEGIN{FS="\""}{print $4}')
 
 # Build and commit artifacts.
-npm install || exit 1
-npm run jake LKG || exit 1
+npm install
+npm run jake LKG
 git add .
-git commit -m "Update LKG"
+git commit -m "Update LKG" -n
 
 # Ready to publish. This could be automated, but it's nice with a
 # human overlook first.
