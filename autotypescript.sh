@@ -1,8 +1,8 @@
-#!/bin/bash
+y#!/bin/bash
 
 pushd $(dirname $0)
 
-patch_file="`pwd`/patches/0001-resolution-platform-option-env-with-dts-fix.patch"
+patch_file="`pwd`/patches/0002-optimizations-from-ts-team.patch"
 
 typescript_checkout="checkouts/typescript.git"
 
