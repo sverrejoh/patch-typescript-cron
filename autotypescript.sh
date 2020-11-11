@@ -34,7 +34,7 @@ then
     exit 1
 fi
 
-worktree_path="../../worktree/$latest_tag/$branch_postfix"
+worktree_path="../../worktree/$latest_tag$branch_postfix/"
 
 if [ -d $worktree_path ]
 then
