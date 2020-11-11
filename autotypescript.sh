@@ -1,4 +1,6 @@
-y#!/bin/bash
+#!/bin/bash
+
+branch_postfix=$1
 
 pushd $(dirname $0)
 
@@ -21,7 +23,7 @@ latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1))
 echo "Found latest tag: $latest_tag"
 
 # Define a branch for our work
-tag_branch="svjohan/generated-typescript-platform-resolution/$latest_tag"
+tag_branch="svjohan/generated-typescript-platform-resolution/$latest_tag$branch_postfix"
 
 # Check if the branch for the tag exists, and exit if so.
 branch_list=$(git branch --list $tag_branch)
@@ -32,7 +34,7 @@ then
     exit 1
 fi
 
-worktree_path="../../worktree/$latest_tag"
+worktree_path="../../worktree/$latest_tag/$branch_postfix"
 
 if [ -d $worktree_path ]
 then
